@@ -14,10 +14,10 @@ Python script to calculate Wannier occupation matrix from Maximally localized Wa
 ## Command line option
 See all option by `wanocc.py -h`
 
-- seed_name, seed name for all files. Default = "wannier90"
-- dis, disentanglement used? Default = False
-- spin, spin polarized calculation? Default = False
-- bnd_exc, number of bands to exclude. Default = 0
+- seed_name, seed name for all files. Default = "wannier90".
+- dis, disentanglement used? Default = False. Choose from: True/False
+- spin, which spin channel to calculate? Default = unpolarized. Choose from: up/down/unpolarized
+- bnd_exc, which bands to exclude. Default = 'empty'
 
 
 ## Usage
