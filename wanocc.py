@@ -54,7 +54,7 @@ def parseIntSet(nputstr=""):
     # Report invalid tokens before returning valid selection
     if len(invalid) > 0:
         print("Invalid set: " + str(invalid))
-    return np.array(selection, dtype=np.int)
+    return np.array(selection, dtype=int)
 
 
 #%% input
@@ -116,7 +116,7 @@ else:
 
 #-------------------------------------------------------------------------------
 if prm.spin == "up":
-    occupation_mat_up=np.zeros([len(occupation_mat),len(occupation_mat[0])/2-tot_bnd_exc],dtype=np.float)
+    occupation_mat_up=np.zeros([len(occupation_mat),len(occupation_mat[0])/2-tot_bnd_exc],dtype=float)
     for i in range(len(occupation_mat)):
         i_bnd_tot = 0
         for i_bnd in range(len(occupation_mat[0])/2):
@@ -125,7 +125,7 @@ if prm.spin == "up":
             occupation_mat_up[i,i_bnd_tot]=occupation_mat[i][i_bnd]
             i_bnd_tot += 1
 elif prm.spin == "down":
-    occupation_mat_up=np.zeros([len(occupation_mat),len(occupation_mat[0])/2-tot_bnd_exc],dtype=np.float)
+    occupation_mat_up=np.zeros([len(occupation_mat),len(occupation_mat[0])/2-tot_bnd_exc],dtype=float)
     for i in range(len(occupation_mat)):
         i_bnd_tot = 0
         for i_bnd in range(len(occupation_mat[0])/2):
@@ -133,8 +133,8 @@ elif prm.spin == "down":
                 continue
             occupation_mat_up[i,i_bnd_tot]=occupation_mat[i][len(occupation_mat[0])/2+i_bnd]
             i_bnd_tot += 1
-else:
-    occupation_mat_up=np.zeros([len(occupation_mat),len(occupation_mat[0])-tot_bnd_exc],dtype=np.float)
+elif prm.spin == "unpolarized":
+    occupation_mat_up=np.zeros([len(occupation_mat),len(occupation_mat[0])-tot_bnd_exc],dtype=float)
     for i in range(len(occupation_mat)):
         i_bnd_tot = 0
         for i_bnd in range(len(occupation_mat[0])):
@@ -142,6 +142,8 @@ else:
                 continue
             occupation_mat_up[i,i_bnd_tot]=occupation_mat[i][i_bnd]
             i_bnd_tot += 1
+else:
+    raise ValueError("spin must be up/down/unpolarized")
 
 
 if prm.disentangle:
@@ -152,13 +154,13 @@ if prm.disentangle:
         nkpt, num_wann, num_bnd = [int(x) for x in f.readline().split()]
         f.readline()
 
-        u_matrix_opt = np.zeros([nkpt, num_wann, num_bnd], dtype=np.complex)
+        u_matrix_opt = np.zeros([nkpt, num_wann, num_bnd], dtype=complex)
 
         for ikpt in range(nkpt):
             k_list.append(f.readline().split())
             for iwann in range(num_wann):
                 for ibnd in range(num_bnd):
-                    u_real, u_img = [np.float(x) for x in f.readline().split()]
+                    u_real, u_img = [float(x) for x in f.readline().split()]
                     u_matrix_opt[ikpt, iwann, ibnd] = complex(u_real, u_img)
             f.readline()
 
@@ -170,13 +172,13 @@ with open(seed_name+"_u.mat") as f:
     nkpt, num_wann, num_bnd = [int(x) for x in f.readline().split()]
     f.readline()
 
-    u_matrix = np.zeros([nkpt, num_wann, num_bnd], dtype=np.complex)
+    u_matrix = np.zeros([nkpt, num_wann, num_bnd], dtype=complex)
 
     for ikpt in range(nkpt):
         k_list.append(f.readline().split())
         for iwann in range(num_wann):
             for ibnd in range(num_bnd):
-                u_real, u_img = [np.float(x) for x in f.readline().split()]
+                u_real, u_img = [float(x) for x in f.readline().split()]
 
                 u_matrix[ikpt, iwann, ibnd] = complex(u_real, u_img)
         f.readline()
@@ -203,24 +205,26 @@ for ikpt in range(nkpt):
         # rotate occ_matrix with u_matrix
         occ_mat.append(phase_factor*np.dot(np.dot(u_matrix[ikpt],a),np.matrix(u_matrix[ikpt]).H))
 
-WF_occ = np.zeros(num_wann,dtype=np.complex)
+WF_occ = np.zeros(num_wann,dtype=complex)
 for ikpt in range(nkpt):
     for i in range(num_wann):
         WF_occ[i] += occ_mat[ikpt][i,i]
 
 
 #-------------------------------------------------------------------------------
-print('''WanOCC v1.0.0
+print('''
+ WanOCC v1.0.0
+
 #------------------------------''')
-print("R lattice: {}".format(R_latt))
+print(" R lattice: {}".format(R_latt))
 print('''#------------------------------
-Orbital index       Occupation
+ Orbital index      Occupation
 #------------------------------''')
 
 
 
 for i in range(len(WF_occ)):
-    print("{:6d}          |   {:8.4f}".format(i+1,np.real(WF_occ[i]/nkpt)))
+    print("   {:6d}       |   {:8.4f}".format(i+1,np.real(WF_occ[i]/nkpt)))
 
 print("#------------------------------")
 
@@ -228,7 +232,7 @@ print("#------------------------------")
 
 # sum over K point for occ_mat_pre_F to get back to real space.
 # this is to show the origina rotation matrix doesn't have the preserved.
-# WF_occ = np.zeros(3,dtype=np.complex)
+# WF_occ = np.zeros(3,dtype=complex)
 # for ikpt in range(nkpt):
 #     for i in range(3):
 #         WF_occ[i] += occ_mat_pre_f[ikpt][i,i]
