@@ -12,8 +12,10 @@ import numpy as np
 parser = argparse.ArgumentParser(description='A script to calculate Wannier Occupation.')
 parser.add_argument('-seed_name', action="store", default=str('wannier90'), dest="seed_name",
                     help='seed_name')
-parser.add_argument('-R', action="store", default=[0,0,0], dest="R_latt",
-                    help='Which R_latt to use? Default: 0,0,0')
+# parser.add_argument('-R', action="store", default=[0,0,0], dest="R_latt",
+#                     help='Which R_latt to use? Default: 0,0,0')
+parser.add_argument('-v', action="store_true", default=False, dest="verbose",
+                    help='Verbose output, print the diagonal part in the home cell. Default: True')
 parser.add_argument('-spin', action="store", default="unpolarized", dest="spin",
                     help='Which spin channel? (Default=unpolarized, available "up"/"down"/"unpolarized")')
 parser.add_argument('-bnd_exc', action="store", default=None, dest="bnd_exclude",
@@ -102,17 +104,17 @@ for dir in range(3):
     R_lim[dir]=np.floor(1/smallest_k)
 
 # sanity check for R latt
-try:
-    R_latt = prm.R_latt.split()
-    R_latt = np.array(R_latt, dtype=int)
-except ValueError:
-    raise ValueError("**ERROR: R lattice must be integers")
-    # print("**ERROR: R lattice must be integers")
-
-if all(R_latt < R_lim):
-    pass
-else:
-    raise ValueError("R lattice no commensurate with K lattice. (R needs to be smaller than {})".format(R_lim))
+# try:
+#     R_latt = prm.R_latt.split()
+#     R_latt = np.array(R_latt, dtype=int)
+# except ValueError:
+#     raise ValueError("**ERROR: R lattice must be integers")
+#     # print("**ERROR: R lattice must be integers")
+#
+# if all(R_latt < R_lim):
+#     pass
+# else:
+#     raise ValueError("R lattice no commensurate with K lattice. (R needs to be smaller than {})".format(R_lim))
 
 #-------------------------------------------------------------------------------
 if prm.spin == "up":
@@ -186,47 +188,70 @@ with open(seed_name+"_u.mat") as f:
 
 # get me occ_mat under wannier basis
 #-----------------------------------
-occ_mat=[]
-occ_mat_pre_f = []
-for ikpt in range(nkpt):
-    a = np.zeros([occupation_mat_up[0].size, occupation_mat_up[0].size])
-    np.fill_diagonal(a,occupation_mat_up[ikpt])
-    if prm.disentangle:
-        # pre-rotate occ_matrix with u_matrix_opt
-        occ_mat_pre = np.dot(np.dot(u_matrix_opt[ikpt],a),np.matrix(u_matrix_opt[ikpt]).H)
-        occ_mat_pre_f.append(occ_mat_pre)
-        # calculate the k factor
-        phase_factor = np.exp(complex(0,np.dot(k_points[ikpt],R_latt)*2*np.pi))
-        # rotate occ_matrix with u_matrix
-        occ_mat.append(phase_factor*np.dot(np.dot(u_matrix[ikpt],occ_mat_pre),np.matrix(u_matrix[ikpt]).H))
-    else:
-        # calculate the k factor
-        phase_factor = np.exp(complex(0,np.dot(k_points[ikpt],R_latt)*2*np.pi))
-        # rotate occ_matrix with u_matrix
-        occ_mat.append(phase_factor*np.dot(np.dot(u_matrix[ikpt],a),np.matrix(u_matrix[ikpt]).H))
+# R_latt = [0,0,0]
+WF_occ = np.zeros([num_wann,num_wann,2*R_lim[0]+1,2*R_lim[1]+1,2*R_lim[2]+1],dtype=complex)
+for R1 in range(-R_lim[0],R_lim[0]+1):
+    for R2 in range(-R_lim[1],R_lim[1]+1):
+        for R3 in range(-R_lim[2],R_lim[2]+1):
+            R_latt = [R1,R2,R3]
+            occ_mat=[]
+            occ_mat_pre_f = []
+            for ikpt in range(nkpt):
+                a = np.zeros([occupation_mat_up[0].size, occupation_mat_up[0].size])
+                np.fill_diagonal(a,occupation_mat_up[ikpt])
+                if prm.disentangle:
+                    # pre-rotate occ_matrix with u_matrix_opt
+                    occ_mat_pre = np.dot(np.dot(u_matrix_opt[ikpt],a),np.matrix(u_matrix_opt[ikpt]).H)
+                    occ_mat_pre_f.append(occ_mat_pre)
+                    # calculate the k factor
+                    phase_factor = np.exp(complex(0,np.dot(k_points[ikpt],R_latt)*2*np.pi))
+                    # rotate occ_matrix with u_matrix
+                    occ_mat.append(phase_factor*np.dot(np.dot(u_matrix[ikpt],occ_mat_pre),np.matrix(u_matrix[ikpt]).H))
+                else:
+                    # calculate the k factor
+                    phase_factor = np.exp(complex(0,np.dot(k_points[ikpt],R_latt)*2*np.pi))
+                    # rotate occ_matrix with u_matrix
+                    occ_mat.append(phase_factor*np.dot(np.dot(u_matrix[ikpt],a),np.matrix(u_matrix[ikpt]).H))
 
-WF_occ = np.zeros(num_wann,dtype=complex)
-for ikpt in range(nkpt):
+            # summing up kpoints
+            for ikpt in range(nkpt):
+                for i in range(num_wann):
+                    for j in range(num_wann):
+                        WF_occ[i,j,R1,R2,R3] += occ_mat[ikpt][i,j]/nkpt
+
+#-------------------------------------------------------------------------------
+from datetime import datetime
+now = datetime.now() # current date and time
+date = now.strftime("%m%b%Y")
+time = now.strftime("%H:%M:%S")
+
+with open(seed_name+"_occ.mat",'w') as f:
+    f.write("written on {} at {} \n".format(date,time))
+    f.write("        {:d}\n".format(num_wann))
+    f.write("        {:d}\n".format(R_lim[0]*R_lim[1]*R_lim[2]))
     for i in range(num_wann):
-        WF_occ[i] += occ_mat[ikpt][i,i]
+        for j in range(num_wann):
+            for R1 in range(-R_lim[0],R_lim[0]+1):
+                for R2 in range(-R_lim[1],R_lim[1]+1):
+                    for R3 in range(-R_lim[2],R_lim[2]+1):
+                        f.write("   {: d}   {: d}   {: d}   {: d}   {: d}  {: 9.6f}  {: 9.6f} \n".format(i,j,R1,R2,R3, WF_occ[i,j,R1,R2,R3].real,WF_occ[i,j,R1,R2,R3].imag))
 
 
 #-------------------------------------------------------------------------------
-print('''
- WanOCC v1.0.0
-
-#------------------------------''')
-print(" R lattice: {}".format(R_latt))
-print('''#------------------------------
- Orbital index      Occupation
-#------------------------------''')
-
-
-
-for i in range(len(WF_occ)):
-    print("   {:6d}       |   {:8.4f}".format(i+1,np.real(WF_occ[i]/nkpt)))
-
-print("#------------------------------")
+if prm.verbose == True:
+    print(''' ''')
+    print('''         WanOCC v1.0.0''')
+    print(''' ''')
+    print('''#------------------------------''')
+    print(''' Orbital index      Occupation''')
+    print('''#------------------------------''')
+    total_charge = 0
+    for i in range(num_wann):
+        total_charge += np.real(WF_occ[i,i,0,0,0])
+        print("   {:6d}       |   {:8.4f}".format(i+1,np.real(WF_occ[i,i,0,0,0])))
+    print("#------------------------------")
+    print(" Charge from diagonal: {:6.4f}".format(total_charge))
+    print("#------------------------------")
 
 
 
