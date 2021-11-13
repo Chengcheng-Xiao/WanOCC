@@ -18,17 +18,25 @@ Rotating the DFT occupation matrix using the unitary matrix calculated by Wannie
 
 2. DFT occupation matrix is read from `seed_name.xml` [from Quantum espresso]
 
+## Output files
+The Wannier occupation will be print in `seed_name_occ.mat` with the following format:
+
+- first line: comment
+- second line: number of wannier functions
+- third line: number of R lattices
+- forth line to EOF: 1st WF index | 2nd WF index | R1 | R2 | R3 | Occupaiton (real) | Occupation (imag).
+
 ## Command line option
 See all option by `wanocc.py -h`
 
 - `seed_name`, seed name for all files. Default = "wannier90".
-- `R`, which R_latt to use. Default: 0,0,0
+<!-- - `R`, which R_latt to use. Default: 0,0,0 -->
 - `dis`, enable subspace selection. Default = False
 - `spin`, which spin channel to calculate? Default = unpolarized. Choose from: up/down/unpolarized
 - `bnd_exc`, which bands to exclude. Default = 'empty'. Format "10-12 15"
-
+- `v`, verbose mode, print out charge on WFs in home cell. Default = False
 
 ## Usage
 ```
-wanocc.py -seed_name test -spin unpolarized -bnd_exc 5-12 -dis -R '0 0 0'
+wanocc.py -seed_name test -spin unpolarized -bnd_exc 5-12 -dis
 ```
