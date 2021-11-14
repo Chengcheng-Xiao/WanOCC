@@ -101,7 +101,7 @@ k_points = np.array(k_points)
 R_lim = np.zeros(3,dtype=int)
 for dir in range(3):
     smallest_k = np.sort(list(set(np.abs(k_points[:,dir]))))[1]
-    R_lim[dir]=np.floor(1/smallest_k)
+    R_lim[dir]=np.round(1/smallest_k)-1
 
 # sanity check for R latt
 # try:
@@ -228,7 +228,7 @@ time = now.strftime("%H:%M:%S")
 with open(seed_name+"_occ.mat",'w') as f:
     f.write("written on {} at {} \n".format(date,time))
     f.write("        {:d}\n".format(num_wann))
-    f.write("        {:d}\n".format(R_lim[0]*R_lim[1]*R_lim[2]))
+    f.write("        {:d}\n".format((2*R_lim[0]+1)*(2*R_lim[1]+1)*(2*R_lim[2]+1)))
     for i in range(num_wann):
         for j in range(num_wann):
             for R1 in range(-R_lim[0],R_lim[0]+1):
