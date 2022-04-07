@@ -82,7 +82,7 @@ for i in root[3][-1][starting_index:]:
 
 #-------------------------------------------------------------------------------
 # get me starting index of kpoints in root
-tree = ET.parse('si.xml')
+tree = ET.parse(seed_name+'.xml')
 root = tree.getroot()
 
 # not sure if this index can change in QE but here it is
