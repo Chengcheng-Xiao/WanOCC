@@ -5,9 +5,11 @@ Python script to calculate Wannier occupation matrix from Maximally localized Wa
 ## Theory
 Rotating the DFT occupation matrix using the unitary matrix calculated by Wannier90 to obtain Wannier occupation matrix:
 
-<!-- \mathscr{F}_{n n'}^{\mathbf{R} \mathbf{R'}} = \sum_{m \mathbf{k}} e^{i\mathbf{k}(\mathbf{R}-\mathbf{R'})} U_{m n'}^{(\mathbf{k})} {U_{m n}^{(\mathbf{k})}}^* f_{m \mathbf{k}} -->
+$$
+\mathscr{F}_{n n'}^{\mathbf{R} \mathbf{R'}} = \sum_{m \mathbf{k}} e^{i\mathbf{k}(\mathbf{R}-\mathbf{R'})} U_{m n'}^{(\mathbf{k})} {U_{m n}^{(\mathbf{k})}}^* f_{m \mathbf{k}}
+$$
 
-![image](WanOcc_eq.svg)
+<!-- ![image](WanOcc_eq.svg) -->
 
 ## Usage
 ```
