@@ -97,11 +97,14 @@ for i in root[2][8][starting_index:]:
 k_points = np.array(k_points)
 
 #%% Calculate R limit with k points
-# assuming k points are evenly spaced
+# NOTE: assuming k points are evenly spaced
 R_lim = np.zeros(3,dtype=int)
 for dir in range(3):
-    smallest_k = np.sort(list(set(np.abs(k_points[:,dir]))))[1]
-    R_lim[dir]=np.round(1/smallest_k)-1
+    if len(np.sort(list(set(np.abs(k_points[:,dir])))))>1: # multi-kpt
+       smallest_k = np.sort(list(set(np.abs(k_points[:,dir]))))[1]
+       R_lim[dir]=np.round(1/smallest_k)-1
+    else: # gamma only
+       R_lim[dir]=1
 
 # sanity check for R latt
 # try:
@@ -118,22 +121,22 @@ for dir in range(3):
 
 #-------------------------------------------------------------------------------
 if prm.spin == "up":
-    occupation_mat_up=np.zeros([len(occupation_mat),len(occupation_mat[0])/2-tot_bnd_exc],dtype=float)
+    occupation_mat_up=np.zeros([len(occupation_mat),int(len(occupation_mat[0])/2-tot_bnd_exc)],dtype=float)
     for i in range(len(occupation_mat)):
         i_bnd_tot = 0
-        for i_bnd in range(len(occupation_mat[0])/2):
+        for i_bnd in range(int(len(occupation_mat[0])/2)):
             if i_bnd+1 in bnd_exclude:
                 continue
             occupation_mat_up[i,i_bnd_tot]=occupation_mat[i][i_bnd]
             i_bnd_tot += 1
 elif prm.spin == "down":
-    occupation_mat_up=np.zeros([len(occupation_mat),len(occupation_mat[0])/2-tot_bnd_exc],dtype=float)
+    occupation_mat_up=np.zeros([len(occupation_mat),int(len(occupation_mat[0])/2-tot_bnd_exc)],dtype=float)
     for i in range(len(occupation_mat)):
         i_bnd_tot = 0
-        for i_bnd in range(len(occupation_mat[0])/2):
+        for i_bnd in range(int(len(occupation_mat[0])/2)):
             if i_bnd+1 in bnd_exclude:
                 continue
-            occupation_mat_up[i,i_bnd_tot]=occupation_mat[i][len(occupation_mat[0])/2+i_bnd]
+            occupation_mat_up[i,i_bnd_tot]=occupation_mat[i][int(len(occupation_mat[0])/2+i_bnd)]
             i_bnd_tot += 1
 elif prm.spin == "unpolarized":
     occupation_mat_up=np.zeros([len(occupation_mat),len(occupation_mat[0])-tot_bnd_exc],dtype=float)
