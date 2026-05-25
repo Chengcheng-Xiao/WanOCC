@@ -1,4 +1,4 @@
-# WamOCC
+# WanOCC
 Python script to calculate Wannier occupation matrix (density matrix) from Maximally localized Wannier functions.
 <!-- [`Wannier90`](http://www.wannier.org/). -->
 
