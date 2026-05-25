@@ -58,6 +58,111 @@ def parseIntSet(nputstr=""):
         print("Invalid set: " + str(invalid))
     return np.array(selection, dtype=int)
 
+def read_wannier90_kpoints(filename="wannier90.win"):
+    """
+    Read k-points from the block:
+    
+        begin kpoints
+        ...
+        end kpoints
+
+    in a wannier90.win file.
+
+    Returns
+    -------
+    kpoints : list of tuple
+        List of (kx, ky, kz)
+    """
+
+    kpoints = []
+    inside_block = False
+
+    with open(filename, "r") as f:
+        for line in f:
+            line_stripped = line.strip()
+            # Skip empty lines and comments
+            if not line_stripped or line_stripped.startswith(("#", "!")):
+                continue
+            lower = line_stripped.lower()
+
+            if lower == "begin kpoints":
+                inside_block = True
+                continue
+            if lower == "end kpoints":
+                inside_block = False
+                break
+
+            if inside_block:
+                parts = line_stripped.split()
+                if len(parts) >= 3:
+                    kx, ky, kz = map(float, parts[:3])
+                    kpoints.append((kx, ky, kz))
+    return kpoints
+
+def read_wannier90_hr(filename="wannier90_hr.dat"):
+    """
+    Read Wannier90 *_hr.dat file.
+
+    Returns
+    -------
+    nrpts : int
+        Number of R-points.
+
+    degeneracies : ndarray of shape (nrpts,)
+        Degeneracy for each R-point.
+
+    R_vectors : ndarray of shape (nrpts, 3)
+        Integer lattice vectors R = (Rx, Ry, Rz).
+    """
+
+    with open(filename, "r") as f:
+        lines = f.readlines()
+
+    # Header
+    comment = lines[0].strip()
+
+    num_wann = int(lines[1])
+    nrpts = int(lines[2])
+
+    # ------------------------------------------------------------
+    # Read degeneracies
+    # Degeneracies are written 15 integers per line
+    # ------------------------------------------------------------
+    degeneracies = []
+
+    idx = 3
+    while len(degeneracies) < nrpts:
+        degeneracies.extend(map(int, lines[idx].split()))
+        idx += 1
+
+    degeneracies = np.array(degeneracies[:nrpts], dtype=int)
+
+    # ------------------------------------------------------------
+    # Read Hamiltonian matrix elements
+    #
+    # Each line format:
+    #   Rx Ry Rz   m   n   Re(H)   Im(H)
+    #
+    # There are nrpts * num_wann^2 lines
+    # ------------------------------------------------------------
+    R_vectors = []
+    total_lines = nrpts * num_wann * num_wann
+    current_R = None
+
+    for i in range(total_lines):
+        parts = lines[idx + i].split()
+        Rx, Ry, Rz = map(int, parts[:3])
+        R = (Rx, Ry, Rz)
+
+        # Each R appears num_wann^2 times;
+        # keep only unique consecutive R's
+        if R != current_R:
+            R_vectors.append(R)
+            current_R = R
+
+    R_vectors = np.array(R_vectors, dtype=int)
+
+    return nrpts, degeneracies, R_vectors
 
 #%% input
 if prm.bnd_exclude != None:
@@ -75,49 +180,18 @@ root = tree.getroot()
 
 starting_index = [i.tag for i in root[3][-1]].index('ks_energies')
 
-# get me occupation matrix
+# get me occupation of KS states.
 occupation_mat = []
 for i in root[3][-1][starting_index:]:
     occupation_mat.append(i[3].text.split())
 
 #-------------------------------------------------------------------------------
-# get me starting index of kpoints in root
-tree = ET.parse(seed_name+'.xml')
-root = tree.getroot()
+# get me k point list from seedname.win
+k_points = read_wannier90_kpoints(seed_name+'.win')
 
-# not sure if this index can change in QE but here it is
-starting_index = [i.tag for i in root[2][8]].index('k_point')
+# get me R_vectors and degeneracies from seedname_hr.dat
+nrpts, degen, R_vectors = read_wannier90_hr(seed_name+'_hr.dat')
 
-# get me kpoints
-k_points = []
-for i in root[2][8][starting_index:]:
-    k_points.append(np.array(i.text.split(),dtype=float))
-
-# convert data format
-k_points = np.array(k_points)
-
-#%% Calculate R limit with k points
-# NOTE: assuming k points are evenly spaced
-R_lim = np.zeros(3,dtype=int)
-for dir in range(3):
-    if len(np.sort(list(set(np.abs(k_points[:,dir])))))>1: # multi-kpt
-       smallest_k = np.sort(list(set(np.abs(k_points[:,dir]))))[1]
-       R_lim[dir]=np.round(1/smallest_k)-1
-    else: # gamma only
-       R_lim[dir]=1
-
-# sanity check for R latt
-# try:
-#     R_latt = prm.R_latt.split()
-#     R_latt = np.array(R_latt, dtype=int)
-# except ValueError:
-#     raise ValueError("**ERROR: R lattice must be integers")
-#     # print("**ERROR: R lattice must be integers")
-#
-# if all(R_latt < R_lim):
-#     pass
-# else:
-#     raise ValueError("R lattice no commensurate with K lattice. (R needs to be smaller than {})".format(R_lim))
 
 #-------------------------------------------------------------------------------
 if prm.spin == "up":
@@ -191,36 +265,36 @@ with open(seed_name+"_u.mat") as f:
 
 # get me occ_mat under wannier basis
 #-----------------------------------
-# R_latt = [0,0,0]
-WF_occ = np.zeros([num_wann,num_wann,2*R_lim[0]+1,2*R_lim[1]+1,2*R_lim[2]+1],dtype=complex)
-for R1 in range(-R_lim[0],R_lim[0]+1):
-    for R2 in range(-R_lim[1],R_lim[1]+1):
-        for R3 in range(-R_lim[2],R_lim[2]+1):
-            R_latt = [R1,R2,R3]
-            occ_mat=[]
-            occ_mat_pre_f = []
-            for ikpt in range(nkpt):
-                a = np.zeros([occupation_mat_up[0].size, occupation_mat_up[0].size])
-                np.fill_diagonal(a,occupation_mat_up[ikpt])
-                if prm.disentangle:
-                    # pre-rotate occ_matrix with u_matrix_opt
-                    occ_mat_pre = np.dot(np.dot(u_matrix_opt[ikpt],a),np.matrix(u_matrix_opt[ikpt]).H)
-                    occ_mat_pre_f.append(occ_mat_pre)
-                    # calculate the k factor
-                    phase_factor = np.exp(complex(0,np.dot(k_points[ikpt],R_latt)*2*np.pi))
-                    # rotate occ_matrix with u_matrix
-                    occ_mat.append(phase_factor*np.dot(np.dot(u_matrix[ikpt],occ_mat_pre),np.matrix(u_matrix[ikpt]).H))
-                else:
-                    # calculate the k factor
-                    phase_factor = np.exp(complex(0,np.dot(k_points[ikpt],R_latt)*2*np.pi))
-                    # rotate occ_matrix with u_matrix
-                    occ_mat.append(phase_factor*np.dot(np.dot(u_matrix[ikpt],a),np.matrix(u_matrix[ikpt]).H))
+WF_occ = np.zeros([num_wann,num_wann,len(R_vectors)],dtype=complex)
+counter = 0
+for R_latt in R_vectors:
+    occ_mat=[]
+    occ_mat_pre_f = []
+    for ikpt in range(nkpt):
+        a = np.zeros([occupation_mat_up[0].size, occupation_mat_up[0].size])
+        np.fill_diagonal(a,occupation_mat_up[ikpt])
+        if prm.disentangle:
+            # pre-rotate occ_matrix with u_matrix_opt
+            occ_mat_pre = np.dot(np.dot(u_matrix_opt[ikpt],a),np.matrix(u_matrix_opt[ikpt]).H)
+            occ_mat_pre_f.append(occ_mat_pre)
+            # calculate the k factor
+            phase_factor = np.exp(complex(0,np.dot(k_points[ikpt],R_latt)*2*np.pi))
+            # rotate occ_matrix with u_matrix
+            occ_mat.append(phase_factor*np.dot(np.dot(u_matrix[ikpt],occ_mat_pre),np.matrix(u_matrix[ikpt]).H))
+        else:
+            # calculate the k factor
+            phase_factor = np.exp(complex(0,np.dot(k_points[ikpt],R_latt)*2*np.pi))
+            # rotate occ_matrix with u_matrix
+            occ_mat.append(phase_factor*np.dot(np.dot(u_matrix[ikpt],a),np.matrix(u_matrix[ikpt]).H))
 
-            # summing up kpoints
-            for ikpt in range(nkpt):
-                for i in range(num_wann):
-                    for j in range(num_wann):
-                        WF_occ[i,j,R1,R2,R3] += occ_mat[ikpt][i,j]/nkpt
+    # summing up kpoints
+    for ikpt in range(nkpt):
+        for i in range(num_wann):
+            for j in range(num_wann):
+                WF_occ[i,j,counter] += occ_mat[ikpt][i,j]/nkpt
+
+    counter += 1
+
 
 #-------------------------------------------------------------------------------
 from datetime import datetime
@@ -228,20 +302,30 @@ now = datetime.now() # current date and time
 date = now.strftime("%m%b%Y")
 time = now.strftime("%H:%M:%S")
 
-with open(seed_name+"_occ.mat",'w') as f:
-    f.write("written on {} at {} \n".format(date,time))
-    f.write("        {:d}\n".format(num_wann))
-    f.write("        {:d}\n".format((2*R_lim[0]+1)*(2*R_lim[1]+1)*(2*R_lim[2]+1)))
-    for i in range(num_wann):
-        for j in range(num_wann):
-            for R1 in range(-R_lim[0],R_lim[0]+1):
-                for R2 in range(-R_lim[1],R_lim[1]+1):
-                    for R3 in range(-R_lim[2],R_lim[2]+1):
-                        f.write("   {: d}   {: d}   {: d}   {: d}   {: d}  {: 9.6f}  {: 9.6f} \n".format(i,j,R1,R2,R3, WF_occ[i,j,R1,R2,R3].real,WF_occ[i,j,R1,R2,R3].imag))
+#  if (False):
+if (True):
+    with open(seed_name+"_occ.dat",'w') as f:
+        f.write(" written on {} at {} \n".format(date,time))
+        f.write("        {:d}\n".format(num_wann))
+        f.write("        {:d}\n".format(nrpts))
+        separator='    '
+        for start in range(0, nrpts, 15):
+            #  count = min(15, nrpts - start)
+            count = min(start+15, nrpts)
+            line = separator + separator.join(degen[start:count].astype(str))
+            f.write(line)
+            f.write('\n')
+        counter = 0
+        for R_latt in R_vectors:
+            for j in range(num_wann):
+                for i in range(num_wann):
+                    f.write("   {: d}   {: d}   {: d}   {: d}   {: d}   {: 9.6f}   {:9.6f} \n".format(R_latt[0],R_latt[1],R_latt[2],i+1,j+1,WF_occ[i,j,counter].real,WF_occ[i,j,counter].imag))
+            counter += 1
 
 
 #-------------------------------------------------------------------------------
 if prm.verbose == True:
+    idx = np.where(np.all(R_vectors == (0, 0, 0), axis=1))[0]
     print(''' ''')
     print('''         WanOCC v1.0.0''')
     print(''' ''')
@@ -250,8 +334,8 @@ if prm.verbose == True:
     print('''#------------------------------''')
     total_charge = 0
     for i in range(num_wann):
-        total_charge += np.real(WF_occ[i,i,0,0,0])
-        print("   {:6d}       |   {:8.4f}".format(i+1,np.real(WF_occ[i,i,0,0,0])))
+        total_charge += np.real(WF_occ[i,i,idx])[0]
+        print("   {:6d}       |   {:8.4f}".format(i+1,np.real(WF_occ[i,i,idx])[0]))
     print("#------------------------------")
     print(" Charge from diagonal: {:6.4f}".format(total_charge))
     print("#------------------------------")

@@ -9,8 +9,8 @@ A simple example of calculating Wannier occupation
 1. Run `pw.x < Si.scf > Si.scf.out` to generate charge density.
 2. Run `pw.x < Si.nscf > Si.nscf.out` to generate wavefunctions on a uniform k grid.
 3. Run `wannier90.x -pp Si` to generate k-points neighbors.
-4. Run `pw2wanier90.x` to generate `.amn` and `.mmn` files.
-5. Run `wanier90.x Si` to generate `Si_u.mat` and `Si_u_dis.mat` files.
+4. Run `pw2wannier90.x < Si.pw2wan > Si.pw2wan.out` to generate `.amn` and `.mmn` files.
+5. Run `wannier90.x Si` to generate `Si_u.mat`, `Si_u_dis.mat` and `Si_hr.dat` files.
 6. Run `wanocc.py -seed_name Si -spin unpolarized -dis -R "0 0 0"` to get Wannier occupations
 
 
@@ -18,6 +18,6 @@ A simple example of calculating Wannier occupation
 1. Run `pw.x < Si.scf > Si.scf.out` to generate charge density.
 2. Run `pw.x < Si.nscf > Si.nscf.out` to generate wavefunctions on a uniform k grid.
 3. Run `wannier90.x -pp Si` to generate k-points neighbors.
-4. Run `pw2wanier90.x` to generate `.amn` and `.mmn` files.
-5. Run `wanier90.x Si` to generate `Si_u.mat` and `Si_u_dis.mat` files.
+4. Run `pw2wannier90.x < Si.pw2wan > Si.pw2wan.out` to generate `.amn` and `.mmn` files.
+5. Run `wannier90.x Si` to generate `Si_u.mat`, `Si_hr.dat` files.
 6. Run `./wanocc.py -seed_name Si -spin unpolarized -bnd_exc 5-12 -R "0 0 0"` to get Wannier occupations

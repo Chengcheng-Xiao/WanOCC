@@ -31,6 +31,8 @@ Si: sp3
 end projections
 
 write_u_matrices = .true.
+write_hr = .true.
+write_rmn = .true.
 
 bands_plot = true
 begin kpoint_path

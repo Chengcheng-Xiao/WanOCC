@@ -35,11 +35,15 @@ See all option by `wanocc.py -h`
 
 2. DFT occupation matrix is read from `seed_name.xml` [from Quantum espresso]
 
+3. k-points are read from `seed_name.win` [from Wannier90]
+
+4. R lattices are read from `seed_name_hr.dat` [from Wannier90]
+
 ## Output file
-The Wannier occupation matrix will be print in `seed_name_occ.mat` with the following format:
+The Wannier occupation matrix will be print in `seed_name_occ.dat` with the following format:
 
 - First line: comment
 - Second line: number of wannier functions
 - Third line: number of R lattices
-- Forth line to EOF: 1st WF index | 2nd WF index | R1 | R2 | R3 | Occupaiton (real) | Occupation (imag).
+- Forth line to EOF: R1 | R2 | R3 | 1st WF index | 2nd WF index | Occupaiton (real) | Occupation (imag).
 
