@@ -11,7 +11,7 @@ A simple example of calculating Wannier occupation
 3. Run `wannier90.x -pp Si` to generate k-points neighbors.
 4. Run `pw2wannier90.x < Si.pw2wan > Si.pw2wan.out` to generate `.amn` and `.mmn` files.
 5. Run `wannier90.x Si` to generate `Si_u.mat`, `Si_u_dis.mat` and `Si_hr.dat` files.
-6. Run `wanocc.py -seed_name Si -spin unpolarized -dis -R "0 0 0"` to get Wannier occupations
+6. Run `wanocc.py -seed_name Si -spin unpolarized -dis` to get Wannier occupations
 
 
 ### Si-valence_bands
@@ -20,4 +20,36 @@ A simple example of calculating Wannier occupation
 3. Run `wannier90.x -pp Si` to generate k-points neighbors.
 4. Run `pw2wannier90.x < Si.pw2wan > Si.pw2wan.out` to generate `.amn` and `.mmn` files.
 5. Run `wannier90.x Si` to generate `Si_u.mat`, `Si_hr.dat` files.
-6. Run `./wanocc.py -seed_name Si -spin unpolarized -bnd_exc 5-12 -R "0 0 0"` to get Wannier occupations
+6. Run `./wanocc.py -seed_name Si -spin unpolarized -bnd_exc 5-12` to get Wannier occupations
+
+## Analysis
+
+`wanocc.py` will generate occupation matrix `seed_name_occ.dat`. We can
+also Fourier transform it back to reciprocal space:
+
+$$
+\rho_{mn}(\mathbf{k}) = \sum_{\mathbf{R}} 1/d_{\mathbf{R}} e^{i\mathbf{k}\cdot\mathbf{R}} \rho_{mn}(\mathbf{R})
+$$
+where $d_{\mathbf{R}}$ is the Wigner-Seitz cell multiplicity of the lattice
+vector $\mathbf{R}$.
+
+We can further diagonalize it to get occupation numbers for each band at a specific k-point.
+This is done by the script `P_eig.py`. For example, we can run
+```
+python P_eig.py -seed_name Si -k "0,0,0"
+```
+and compare it with the band occupation calculated from DFT.
+
+We can also calculate the total band energies by taking the trace of the product
+of the density matrix (occupation matrix) and the Hamiltonian matrix in the
+Wannier basis.
+
+$$
+E_\mathrm{band} = \sum_\mathbf{R} 1/(d_\mathbf{R})^2 \mathrm{Tr}[\rho(\mathbf{R}) H^\dagger(\mathbf{R})]
+$$
+
+This can be done using the script `PH.py`. For example, we can run
+```
+python PH.py -seed_name Si
+```
+and compare the total band energy with the DFT total energy.

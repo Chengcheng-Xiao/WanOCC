@@ -287,7 +287,8 @@ for R_latt in R_vectors:
             # rotate occ_matrix with u_matrix
             occ_mat.append(phase_factor*np.dot(np.dot(u_matrix[ikpt],a),np.matrix(u_matrix[ikpt]).H))
 
-    # summing up kpoints
+    # summing up kpoints weighted by k-weight (1/nkpt for wannier90 uses
+    # uniform-kpoint grid)
     for ikpt in range(nkpt):
         for i in range(num_wann):
             for j in range(num_wann):
