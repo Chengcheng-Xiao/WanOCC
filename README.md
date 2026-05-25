@@ -1,5 +1,5 @@
-# WANOCC
-Python script to calculate Wannier occupation matrix from Maximally localized Wannier functions.
+# WamOCC
+Python script to calculate Wannier occupation matrix (density matrix) from Maximally localized Wannier functions.
 <!-- [`Wannier90`](http://www.wannier.org/). -->
 
 ## Theory
@@ -44,6 +44,7 @@ The Wannier occupation matrix will be print in `seed_name_occ.dat` with the foll
 
 - First line: comment
 - Second line: number of wannier functions
-- Third line: number of R lattices
+- Third line: number of R lattices (nrpts)
+- Next nrpts integers: gives the degeneracy of each Wigner-Seitz grid point, with 15 entries per line.
 - Forth line to EOF: R1 | R2 | R3 | 1st WF index | 2nd WF index | Occupaiton (real) | Occupation (imag).
 
