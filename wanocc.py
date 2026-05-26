@@ -327,36 +327,73 @@ with open(seed_name+"_u.mat") as f:
 
 # get me occ_mat under wannier basis
 #-----------------------------------
-WF_occ = np.zeros([num_wann,num_wann,len(R_vectors)],dtype=complex)
-counter = 0
-for R_latt in R_vectors:
-    occ_mat=[]
-    occ_mat_pre_f = []
-    for ikpt in range(nkpt):
-        a = np.zeros([occupation_mat_up[0].size, occupation_mat_up[0].size])
-        np.fill_diagonal(a,occupation_mat_up[ikpt])
-        if prm.disentangle:
-            # pre-rotate occ_matrix with u_matrix_opt
-            occ_mat_pre = np.dot(np.dot(u_matrix_opt[ikpt],a),np.matrix(u_matrix_opt[ikpt]).H)
-            occ_mat_pre_f.append(occ_mat_pre)
-            # calculate the k factor
-            phase_factor = np.exp(complex(0,np.dot(k_points[ikpt],R_latt)*2*np.pi))
-            # rotate occ_matrix with u_matrix
-            occ_mat.append(phase_factor*np.dot(np.dot(u_matrix[ikpt],occ_mat_pre),np.matrix(u_matrix[ikpt]).H))
-        else:
-            # calculate the k factor
-            phase_factor = np.exp(complex(0,np.dot(k_points[ikpt],R_latt)*2*np.pi))
-            # rotate occ_matrix with u_matrix
-            occ_mat.append(phase_factor*np.dot(np.dot(u_matrix[ikpt],a),np.matrix(u_matrix[ikpt]).H))
 
-    # summing up kpoints weighted by k-weight (1/nkpt for wannier90 uses
-    # uniform-kpoint grid)
-    for ikpt in range(nkpt):
-        for i in range(num_wann):
-            for j in range(num_wann):
-                WF_occ[i,j,counter] += occ_mat[ikpt][i,j]/nkpt
+#------------------------------------------------------------------------------
+# original verison, kept for reference, but it's very slow due to the triple
+# loop over k-points and R-vectors
+#------------------------------------------------------------------------------
+#  WF_occ = np.zeros([num_wann,num_wann,len(R_vectors)],dtype=complex)
+#  counter = 0
+#  print("Calculating Wannier occupation in real space...")
+#  for R_latt in R_vectors:
+#      print("  R = ({:d}, {:d}, {:d})".format(R_latt[0], R_latt[1], R_latt[2]))
+#      occ_mat=[]
+#      occ_mat_pre_f = []
+#      for ikpt in range(nkpt):
+#          a = np.zeros([occupation_mat_up[0].size, occupation_mat_up[0].size])
+#          np.fill_diagonal(a,occupation_mat_up[ikpt])
+#          if prm.disentangle:
+#              # pre-rotate occ_matrix with u_matrix_opt
+#              occ_mat_pre = np.dot(np.dot(u_matrix_opt[ikpt],a),np.matrix(u_matrix_opt[ikpt]).H)
+#              occ_mat_pre_f.append(occ_mat_pre)
+#              # calculate the k factor
+#              phase_factor = np.exp(complex(0,np.dot(k_points[ikpt],R_latt)*2*np.pi))
+#              # rotate occ_matrix with u_matrix
+#              occ_mat.append(phase_factor*np.dot(np.dot(u_matrix[ikpt],occ_mat_pre),np.matrix(u_matrix[ikpt]).H))
+#          else:
+#              # calculate the k factor
+#              phase_factor = np.exp(complex(0,np.dot(k_points[ikpt],R_latt)*2*np.pi))
+#              # rotate occ_matrix with u_matrix
+#              occ_mat.append(phase_factor*np.dot(np.dot(u_matrix[ikpt],a),np.matrix(u_matrix[ikpt]).H))
+#
+#      # summing up kpoints weighted by k-weight (1/nkpt for wannier90 uses
+#      # uniform-kpoint grid)
+#      for ikpt in range(nkpt):
+#          for i in range(num_wann):
+#              for j in range(num_wann):
+#                  WF_occ[i,j,counter] += occ_mat[ikpt][i,j]/nkpt
+#
+#      counter += 1
 
-    counter += 1
+#------------------------------------------------------------------------------
+# optmized version of the above code using numpy broadcasting and vectorization
+#------------------------------------------------------------------------------
+print("Calculating Wannier occupation in real space...")
+# Precompute phase factors
+phase_factors = np.exp(1j * 2 * np.pi * np.dot(k_points, R_vectors.T))
+
+WF_occ = np.zeros((num_wann, num_wann, nrpts), dtype=complex)
+
+for ikpt in range(nkpt):
+    if prm.disentangle:
+        occ_mat_pre = (u_matrix_opt[ikpt] * occupation_mat_up[ikpt]) @ u_matrix_opt[ikpt].conj().T
+        occ_mat_pre = np.diag(occ_mat_pre)  # Extract diagonal elements after pre-rotation
+    else:
+        occ_mat_pre = occupation_mat_up[ikpt]
+    #  occ = occupation_mat_up[ikpt]  # 1D diagonal elements
+    occ = occ_mat_pre # 1D diagonal elements
+    U = u_matrix[ikpt]  # Shape: (num_wann, nbands)
+
+    # Optimized rotation: U * diag(occ) * U^H
+    # Using broadcasting to multiply U columns by occ
+    rotated = (U * occ) @ U.conj().T
+
+    # Vectorized accumulation across all R vectors
+    WF_occ += rotated[:, :, np.newaxis] * phase_factors[ikpt, np.newaxis, np.newaxis, :]
+
+# Average over k-points,assuming we have uniform k-point grid, so each k-point
+# has equal weight of 1/nkpt
+WF_occ /= nkpt
 
 
 #-------------------------------------------------------------------------------

@@ -35,7 +35,8 @@ See all option by `wanocc.py -h`
 
    [Optional] spin polarization: `seed_name_up[dn]_u_dis.mat`
 
-2. DFT occupation matrix is read from `seed_name.xml` [from Quantum espresso]
+2. DFT occupation matrix is read from `seed_name.xml` [from Quantum espresso] or
+   `vasprun.xml` [from VASP].
 
 3. k-points are read from `seed_name.win` [from Wannier90]
 
