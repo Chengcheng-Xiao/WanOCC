@@ -22,6 +22,8 @@ parser.add_argument('-bnd_exc', action="store", default=None, dest="bnd_exclude"
                     help='Which bands to exclude? (Default=None)')
 parser.add_argument('-dis', action="store_true", default=False, dest="disentangle",
                     help='Do we want to use disentanglement procedure?')
+parser.add_argument('-dft', action="store", default="qe", dest="dft",
+                    help='What DFT code? (Default=qe, available "qe"/"vasp")')
 
 prm = parser.parse_args()
 
@@ -57,6 +59,47 @@ def parseIntSet(nputstr=""):
     if len(invalid) > 0:
         print("Invalid set: " + str(invalid))
     return np.array(selection, dtype=int)
+
+def extract_occupations_array_vasp(vasprun_file):
+    tree = ET.parse(vasprun_file)
+    root = tree.getroot()
+
+    # Find eigenvalues section
+    eigenvalues = root.find(".//eigenvalues")
+    if eigenvalues is None:
+        raise ValueError("No <eigenvalues> section found.")
+
+    # Top-level <set>
+    top_set = eigenvalues.find(".//set")
+    spin_sets = top_set.findall("set")
+
+    all_occ = []
+
+    for spin_set in spin_sets:
+        spin_occ = []
+
+        # k-points inside this spin
+        kpoint_sets = spin_set.findall("set")
+
+        for k_set in kpoint_sets:
+            band_occ = []
+
+            # each <r> contains: eigenvalue occupation
+            for r in k_set.findall("r"):
+                vals = r.text.split()
+
+                occ = float(vals[1])   # second column = occupation
+                band_occ.append(occ)
+
+            spin_occ.append(band_occ)
+
+        all_occ.append(spin_occ)
+
+    # Convert to numpy array
+    occ_array = np.array(all_occ)
+
+    return occ_array
+
 
 def read_wannier90_kpoints(filename="wannier90.win"):
     """
@@ -174,16 +217,35 @@ else:
 seed_name = prm.seed_name
 
 #-------------------------------------------------------------------------------
-# get me starting index of ks_energies in root
-tree = ET.parse(seed_name+'.xml')
-root = tree.getroot()
+if prm.dft == "qe":
+    # get me starting index of ks_energies in root
+    tree = ET.parse(seed_name+'.xml')
+    root = tree.getroot()
 
-starting_index = [i.tag for i in root[3][-1]].index('ks_energies')
+    starting_index = [i.tag for i in root[3][-1]].index('ks_energies')
 
-# get me occupation of KS states.
-occupation_mat = []
-for i in root[3][-1][starting_index:]:
-    occupation_mat.append(i[3].text.split())
+    # get me occupation of KS states.
+    occupation_mat = []
+    for i in root[3][-1][starting_index:]:
+        occupation_mat.append(i[3].text.split())
+
+elif prm.dft == "vasp":
+    occ = extract_occupations_array_vasp("vasprun.xml")
+    # occ Shape = (nspin, nkpts, nbands)
+    if occ.shape[0] == 1:
+        # unpolarized case, duplicate the spin channel
+        occupation_mat = occ[0]
+    elif occ.shape[0] == 2:
+        # spin-polarized case, concatenate the two spin channels
+        occupation_mat = np.column_stack([
+            occ[0, :, :],
+            occ[1, :, :]
+        ])
+    else:
+        raise ValueError("Unexpected number of spin channels in vasprun.xml: {}".format(occ.shape[0]))
+
+else:
+    raise ValueError("Unsupported DFT code: {}. Available options: qe/vasp".format(prm.dft))
 
 #-------------------------------------------------------------------------------
 # get me k point list from seedname.win

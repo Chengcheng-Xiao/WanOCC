@@ -24,6 +24,8 @@ See all option by `wanocc.py -h`
 - `dis`, enable subspace selection. Default = False
 - `spin`, which spin channel to calculate? Default = unpolarized. Choose from: up/down/unpolarized
 - `bnd_exc`, which bands to exclude. Default = 'empty'. Format "10-12 15"
+- `dft`, which DFT code to read occupation matrix from? Default = 'qe'. Choose
+  from: qe/vasp
 - `v`, verbose mode, print out charge on WFs in home cell. Default = False
 
 ## Input files
