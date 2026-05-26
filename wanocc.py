@@ -427,7 +427,7 @@ if (True):
 if prm.verbose == True:
     idx = np.where(np.all(R_vectors == (0, 0, 0), axis=1))[0]
     print(''' ''')
-    print('''         WanOCC v1.0.0''')
+    print('''         WanOCC v1.1.0''')
     print(''' ''')
     print('''#------------------------------''')
     print(''' Orbital index      Occupation''')
