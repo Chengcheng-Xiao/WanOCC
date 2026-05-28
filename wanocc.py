@@ -302,7 +302,7 @@ if prm.disentangle:
             for iwann in range(num_wann):
                 for ibnd in range(num_bnd):
                     u_real, u_img = [float(x) for x in f.readline().split()]
-                    u_matrix_opt[ikpt, iwann, ibnd] = complex(u_real, u_img)
+                    u_matrix_opt[ikpt, ibnd, iwann] = complex(u_real, u_img)
             f.readline()
 
 
@@ -321,7 +321,7 @@ with open(seed_name+"_u.mat") as f:
             for ibnd in range(num_bnd):
                 u_real, u_img = [float(x) for x in f.readline().split()]
 
-                u_matrix[ikpt, iwann, ibnd] = complex(u_real, u_img)
+                u_matrix[ikpt, ibnd, iwann] = complex(u_real, u_img)
         f.readline()
 
 
@@ -376,7 +376,7 @@ WF_occ = np.zeros((num_wann, num_wann, nrpts), dtype=complex)
 
 for ikpt in range(nkpt):
     if prm.disentangle:
-        occ_mat_pre = (u_matrix_opt[ikpt] * occupation_mat_up[ikpt]) @ u_matrix_opt[ikpt].conj().T
+        occ_mat_pre = (u_matrix_opt[ikpt].conj().T * occupation_mat_up[ikpt]) @ u_matrix_opt[ikpt]
         occ_mat_pre = np.diag(occ_mat_pre)  # Extract diagonal elements after pre-rotation
     else:
         occ_mat_pre = occupation_mat_up[ikpt]
@@ -384,9 +384,9 @@ for ikpt in range(nkpt):
     occ = occ_mat_pre # 1D diagonal elements
     U = u_matrix[ikpt]  # Shape: (num_wann, nbands)
 
-    # Optimized rotation: U * diag(occ) * U^H
+    # Optimized rotation: U^\dagger * diag(occ) * U
     # Using broadcasting to multiply U columns by occ
-    rotated = (U * occ) @ U.conj().T
+    rotated = (U.conj().T * occ) @ U
 
     # Vectorized accumulation across all R vectors
     WF_occ += rotated[:, :, np.newaxis] * phase_factors[ikpt, np.newaxis, np.newaxis, :]
