@@ -295,7 +295,7 @@ if prm.disentangle:
         nkpt, num_wann, num_bnd = [int(x) for x in f.readline().split()]
         f.readline()
 
-        u_matrix_opt = np.zeros([nkpt, num_wann, num_bnd], dtype=complex)
+        u_matrix_opt = np.zeros([nkpt, num_bnd, num_wann], dtype=complex)
 
         for ikpt in range(nkpt):
             k_list.append(f.readline().split())
