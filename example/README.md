@@ -53,7 +53,7 @@ python H_eig.py -seed_name Si -k "0,0,0"
 ```
 The results can be benchmarked against DFT values.
 
-### Total bend energies
+### Total band energies
 We can also calculate the total band energies by taking the trace of the product of the density matrix (occupation matrix) and the Hamiltonian matrix in the Wannier basis.
 
 $$
@@ -65,3 +65,17 @@ This can be done using the script `PH.py`. For example, we can run
 python PH.py -seed_name Si
 ```
 and compare the total band energy with the DFT total energy.
+
+### Total dipole
+We can also calculate the electronic contribution to the dipole moment by taking the trace of the product of the density matrix (occupation matrix) and the position matrix in the Wannier basis.
+
+
+$$
+D_\mathrm{elect.} = \sum_\mathbf{R} \frac{1}{d^2_{\mathbf{R}}} \mathrm{Tr}[\rho(\mathbf{R}) r^\dagger(\mathbf{R})]
+$$
+
+This can be done using the script `PR.py`. For example, we can run
+```
+python PR.py -seed_name Si
+```
+and compare the electronic dipole moment with the DFT value.
