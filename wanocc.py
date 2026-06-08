@@ -377,19 +377,29 @@ WF_occ = np.zeros((num_wann, num_wann, nrpts), dtype=complex)
 for ikpt in range(nkpt):
     if prm.disentangle:
         occ_mat_pre = (u_matrix_opt[ikpt].conj().T * occupation_mat_up[ikpt]) @ u_matrix_opt[ikpt]
-        occ_mat_pre = np.diag(occ_mat_pre)  # Extract diagonal elements after pre-rotation
+        #  occ_mat_pre = np.diag(occ_mat_pre)  # Extract diagonal elements after pre-rotation
+
+        occ = occ_mat_pre # 1D diagonal elements
+        U = u_matrix[ikpt]  # Shape: (num_wann, nbands)
+
+        # Optimized rotation: U^\dagger * diag(occ) * U
+        # Using broadcasting to multiply U columns by occ
+        rotated = (U.conj().T @ occ) @ U
+
+        # Vectorized accumulation across all R vectors
+        WF_occ += rotated[:, :, np.newaxis] * phase_factors[ikpt, np.newaxis, np.newaxis, :]
     else:
         occ_mat_pre = occupation_mat_up[ikpt]
-    #  occ = occupation_mat_up[ikpt]  # 1D diagonal elements
-    occ = occ_mat_pre # 1D diagonal elements
-    U = u_matrix[ikpt]  # Shape: (num_wann, nbands)
 
-    # Optimized rotation: U^\dagger * diag(occ) * U
-    # Using broadcasting to multiply U columns by occ
-    rotated = (U.conj().T * occ) @ U
+        occ = occ_mat_pre # 1D diagonal elements
+        U = u_matrix[ikpt]  # Shape: (num_wann, nbands)
 
-    # Vectorized accumulation across all R vectors
-    WF_occ += rotated[:, :, np.newaxis] * phase_factors[ikpt, np.newaxis, np.newaxis, :]
+        # Optimized rotation: U^\dagger * diag(occ) * U
+        # Using broadcasting to multiply U columns by occ
+        rotated = (U.conj().T * occ) @ U
+
+        # Vectorized accumulation across all R vectors
+        WF_occ += rotated[:, :, np.newaxis] * phase_factors[ikpt, np.newaxis, np.newaxis, :]
 
 # Average over k-points,assuming we have uniform k-point grid, so each k-point
 # has equal weight of 1/nkpt
@@ -419,7 +429,7 @@ if (True):
         for R_latt in R_vectors:
             for j in range(num_wann):
                 for i in range(num_wann):
-                    f.write("   {: d}   {: d}   {: d}   {: d}   {: d}   {: 9.6f}   {:9.6f} \n".format(R_latt[0],R_latt[1],R_latt[2],i+1,j+1,WF_occ[i,j,counter].real,WF_occ[i,j,counter].imag))
+                    f.write("   {: d}   {: d}   {: d}   {: d}   {: d}   {: 9.6f} {:9.6f} \n".format(R_latt[0],R_latt[1],R_latt[2],i+1,j+1,WF_occ[j,i,counter].real,WF_occ[j,i,counter].imag))
             counter += 1
 
 
