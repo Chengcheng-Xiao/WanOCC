@@ -120,5 +120,7 @@ if __name__ == "__main__":
 
     eigvals = eigenvalues_at_k(hr_file, kvec)
 
-    print("Eigenvalues at k =", kvec)
-    print(np.sort(eigvals)[::-1])
+    #  print("Eigenvalues at k =", kvec)
+    #  print(np.sort(eigvals)[::-1])
+    for i in np.sort(eigvals)[::-1]:
+        print(i)

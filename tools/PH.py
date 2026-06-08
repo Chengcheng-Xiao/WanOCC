@@ -69,9 +69,9 @@ def read_wannier90_hr(filename):
             line_index += 1
 
     R_vectors = list(hoppings_dict.keys())
-    with open("R_vectors.txt", "w") as f:
-        for R in R_vectors:
-            f.write(f"{R[0]} {R[1]} {R[2]} \n")
+    #  with open("R_vectors.txt", "w") as f:
+    #      for R in R_vectors:
+    #          f.write(f"{R[0]} {R[1]} {R[2]} \n")
     hoppings = [hoppings_dict[R] for R in R_vectors]
 
     return num_wann, nrpts, degeneracies, R_vectors, hoppings
@@ -81,10 +81,10 @@ if __name__ == "__main__":
 
     hr_file = prm.seed_name + "_hr.dat"
     (
-        num_wann,
-        nrpts,
-        degeneracies,
-        R_vectors,
+        num_wann_hr,
+        nrpts_hr,
+        degeneracies_hr,
+        R_vectors_hr,
         hoppings
     ) = read_wannier90_hr(hr_file)
 
@@ -97,11 +97,20 @@ if __name__ == "__main__":
         occupations
     ) = read_wannier90_hr(occ_file)
 
-    # calculate \sum_R 1/d^2_R Tr[H(R) * P(R)]
+    assert num_wann_hr == num_wann, "different number of wannier functions"
+    assert nrpts_hr == nrpts, "different number of nrpts"
+    assert degeneracies_hr == degeneracies, "degeneracies different"
+
+    # calculate \sum_R 1/d^2_R Tr[P(R) * H(-R)]
+    #                          \sum_{mn} P(R)_{nm}H(-R)_{mn}
+    #                          \sum_{mn} P(R)_{nm}H(R)_{nm}^*
     result = 0.0
     for R_idx in range(nrpts):
-        result += (1.0 / (degeneracies[R_idx] ** 2)) * np.trace(
-            np.dot(np.matrix(occupations[R_idx]),np.matrix(hoppings[R_idx]).H)
+        #  result += (1.0 / (degeneracies[R_idx] ** 2)) * np.trace(
+        #      np.dot(np.array(occupations[R_idx]),np.array(hoppings[R_idx]).T)
+        #  )
+        result += (1.0 / (degeneracies[R_idx] ** 2)) * np.sum(
+            np.array(occupations[R_idx] * np.array(hoppings[R_idx]).conj())
         )
 
-    print("band energy:", np.real(result))
+    print("band energy:", result)

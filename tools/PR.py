@@ -69,9 +69,9 @@ def read_wannier90_r(filename):
             line_index += 1
 
     R_vectors = list(hoppings_dict.keys())
-    with open("R_vectors.txt", "w") as f:
-        for R in R_vectors:
-            f.write(f"{R[0]} {R[1]} {R[2]} \n")
+    #  with open("R_vectors.txt", "w") as f:
+    #      for R in R_vectors:
+    #          f.write(f"{R[0]} {R[1]} {R[2]} \n")
     hoppings = [hoppings_dict[R] for R in R_vectors]
 
     return num_wann, nrpts, degeneracies, R_vectors, hoppings
@@ -140,10 +140,10 @@ if __name__ == "__main__":
 
     r_file = prm.seed_name + "_r.dat"
     (
-        num_wann,
-        nrpts,
-        degeneracies,
-        R_vectors,
+        num_wann_r,
+        nrpts_r,
+        degeneracies_r,
+        R_vectors_r,
         hoppings
     ) = read_wannier90_r(r_file)
 
@@ -156,12 +156,26 @@ if __name__ == "__main__":
         occupations
     ) = read_wannier90_hr(occ_file)
 
-    # calculate \sum_R 1/d^2_R Tr[H(R) * P(R)]
+    assert num_wann_r == num_wann, "different number of wannier functions"
+    #  assert nrpts_r == nrpts, "different number of nrpts"
+    #  assert degeneracies_r == degeneracies, "degeneracies different"
+
+    # calculate \sum_R 1/d^2_R Tr[P(R) * r(-R)]
+    #                          \sum_{mn} P(R)_{nm}r(-R)_{mn}
+    #                          \sum_{mn} P(R)_{nm}r(R)_{nm}^*
     for dir in range(3):
         result = 0.0
         for R_idx in range(nrpts):
-            result += (1.0 / (degeneracies[R_idx] ** 2)) * np.trace(
-                    np.dot(np.matrix(occupations[R_idx]),np.matrix(hoppings[R_idx][:,:,dir]).H)
+            # matching R vector, use occupation degeneracies
+            R_idx_r = np.where(np.all(np.array(R_vectors_r) ==
+                                      np.array(R_vectors)[R_idx], axis=1))[0][0]
+            #  print(R_idx_r)
+            #  result += (1.0 / (degeneracies[R_idx] ** 1)) * np.trace(
+            #          np.dot(np.matrix(occupations[R_idx]),np.matrix(hoppings[R_idx][:,:,dir]).H)
+            #  )
+            result += (1.0 / (degeneracies[R_idx] ** 2)) * np.sum(
+                    np.array(occupations[R_idx] *
+                             np.array(hoppings[R_idx_r][:,:,dir]).conj())
             )
 
         print(f"dipole moment dir {dir}: {np.real(result):+0.5f}")

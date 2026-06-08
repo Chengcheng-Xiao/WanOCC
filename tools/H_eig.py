@@ -68,9 +68,9 @@ def read_wannier90_hr(filename):
             line_index += 1
 
     R_vectors = list(hoppings_dict.keys())
-    with open("R_vectors.txt", "w") as f:
-        for R in R_vectors:
-            f.write(f"{R[0]} {R[1]} {R[2]} \n")
+    #  with open("R_vectors.txt", "w") as f:
+    #      for R in R_vectors:
+    #          f.write(f"{R[0]} {R[1]} {R[2]} \n")
     hoppings = [hoppings_dict[R] for R in R_vectors]
 
     return num_wann, nrpts, degeneracies, R_vectors, hoppings
@@ -123,5 +123,7 @@ if __name__ == "__main__":
 
     eigvals = eigenvalues_at_k(hr_file, kvec)
 
-    print("Eigenvalues at k =", kvec)
-    print(eigvals)
+    #  print("Eigenvalues at k =", kvec)
+    #  print(eigvals)
+    for i in eigvals:
+        print(i)
