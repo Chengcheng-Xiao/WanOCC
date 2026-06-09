@@ -405,6 +405,10 @@ for ikpt in range(nkpt):
 # has equal weight of 1/nkpt
 WF_occ /= nkpt
 
+# NOTE: here WF_occ[i,j,R] is the occupation matrix element between Wannier
+# function i and j at R lattice vector R. R is the fastest running idx and j the
+# second fastest running idx. Hence it is P_{ji}(R) in Wannier90 format.
+
 
 #-------------------------------------------------------------------------------
 from datetime import datetime
@@ -429,7 +433,19 @@ if (True):
         for R_latt in R_vectors:
             for j in range(num_wann):
                 for i in range(num_wann):
-                    f.write("   {: d}   {: d}   {: d}   {: d}   {: d}   {: 9.6f} {:9.6f} \n".format(R_latt[0],R_latt[1],R_latt[2],i+1,j+1,WF_occ[j,i,counter].real,WF_occ[j,i,counter].imag))
+                    #  f.write("   {: d}   {: d}   {: d}   {: d}   {: d}   {: 9.6f} {:9.6f} \n".format(R_latt[0],R_latt[1],R_latt[2],i+1,j+1,WF_occ[j,i,counter].real,WF_occ[j,i,counter].imag))
+                    f.write(
+                            "{:5d} {:5d} {:5d} {:5d} {:5d} "
+                            "{:12.6f} {:12.6f}\n".format(
+                                R_latt[0],
+                                R_latt[1],
+                                R_latt[2],
+                                i + 1,
+                                j + 1,
+                                WF_occ[j, i, counter].real, #note j, i order
+                                WF_occ[j, i, counter].imag, #note j, i order
+                            )
+                        )
             counter += 1
 
 
